@@ -1,11 +1,13 @@
+import type Snowboard from "./Snowboard";
+
 export default {
-    get(target, prop, receiver) {
+    get(target: Snowboard, prop: any, receiver: unknown) {
         if (typeof prop === 'string' && target.hasAbstract(prop)) {
             return Reflect.get(target, 'abstracts')
                 .get(prop);
         }
         if (typeof prop === 'string' && target.hasPlugin(prop)) {
-            return (...params) => Reflect.get(target, 'plugins')
+            return (...params: any[]) => Reflect.get(target, 'plugins')
                 .get(prop.toLowerCase())
                 .getInstance(...params);
         }
@@ -13,7 +15,7 @@ export default {
         return Reflect.get(target, prop, receiver);
     },
 
-    has(target, prop) {
+    has(target: Snowboard, prop: PropertyKey) {
         if (typeof prop === 'string' && target.hasAbstract(prop)) {
             return true;
         }
@@ -24,7 +26,7 @@ export default {
         return Reflect.has(target, prop);
     },
 
-    deleteProperty(target, prop) {
+    deleteProperty(target: Snowboard, prop: PropertyKey) {
         if (typeof prop === 'string' && target.hasPlugin(prop)) {
             target.removePlugin(prop);
             return true;

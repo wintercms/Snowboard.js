@@ -1,3 +1,5 @@
+import Trait from '../abstracts/Trait';
+
 /**
  * Widget event handler.
  *
@@ -11,14 +13,10 @@
  * @copyright 2022 Winter.
  * @author Ben Thomson <git@alfreido.com>
  */
-export default class FiresEvents {
-    /**
-     * Trait constructor and definition.
-     */
-    constructor() {
-        this.eventListeners = [];
-        this.localEventsOnly = false;
-    }
+export default class FiresEvents extends Trait {
+    eventListeners: { event: string, callback: Function }[] = [];
+    localEventsOnly: boolean = false;
+    eventPrefix: string = '';
 
     /**
      * Instance constructor.
@@ -31,11 +29,8 @@ export default class FiresEvents {
 
     /**
      * Registers a listener for a widget's event.
-     *
-     * @param {String} event
-     * @param {Function} callback
      */
-    on(event, callback) {
+    on(event: string, callback: Function): void {
         this.eventListeners.push({
             event,
             callback,
@@ -44,11 +39,8 @@ export default class FiresEvents {
 
     /**
      * Deregisters a listener for a widget's event.
-     *
-     * @param {String} event
-     * @param {Function} callback
      */
-    off(event, callback) {
+    off(event: string, callback: Function) {
         this.eventListeners = this.eventListeners.filter(
             (registeredEvent) => registeredEvent.event !== event
                 || registeredEvent.callback !== callback,
@@ -57,14 +49,11 @@ export default class FiresEvents {
 
     /**
      * Registers a listener for a widget's event that will only fire once.
-     *
-     * @param {String} event
-     * @param {Function} callback
      */
-    once(event, callback) {
+    once(event: string, callback: Function) {
         const length = this.eventListeners.push({
             event,
-            callback: (...parameters) => {
+            callback: (...parameters: any[]) => {
                 callback(...parameters);
                 this.eventListeners.splice(length - 1, 1);
             },
@@ -75,11 +64,8 @@ export default class FiresEvents {
      * Triggers an event on the widget.
      *
      * Local events are triggered first, then a global event is sent afterwards.
-     *
-     * @param {String} eventName
-     * @param  {...any} parameters
      */
-    triggerEvent(eventName, ...parameters) {
+    triggerEvent(eventName: string, ...parameters: any[]) {
         // Fire local events first
         const events = this.eventListeners.filter(
             (registeredEvent) => registeredEvent.event === eventName,
@@ -108,11 +94,8 @@ export default class FiresEvents {
      * Fires a promise event on the widget.
      *
      * Local events are triggered first, then a global promise event is sent afterwards.
-     *
-     * @param {String} eventName
-     * @param  {...any} parameters
      */
-    triggerPromiseEvent(eventName, ...parameters) {
+    triggerPromiseEvent(eventName: string, ...parameters: any[]) {
         const events = this.eventListeners.filter(
             (registeredEvent) => registeredEvent.event === eventName,
         );

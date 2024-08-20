@@ -1,3 +1,5 @@
+import { describe, beforeEach, afterEach, it, expect } from 'vitest';
+
 import TestInstance from '../../src/main/Snowboard';
 import TestPlugin from '../fixtures/framework/TestPlugin';
 import TestSingleton from '../fixtures/framework/TestSingleton';
@@ -11,7 +13,7 @@ describe('PluginLoader class', () => {
     });
 
     afterEach(() => {
-        window.Snowboard.tearDown();
+        // window.Snowboard.tearDown();
     });
 
     it('can mock existing methods on a singleton', () => {

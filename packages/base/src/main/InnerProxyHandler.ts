@@ -1,3 +1,5 @@
+import type Snowboard from "./Snowboard";
+
 /**
  * Internal proxy for Snowboard.
  *
@@ -9,7 +11,7 @@
  *  - `initialiseSingletons`: Singletons are already initialised.
  */
 export default {
-    get(target, prop, receiver) {
+    get(target: Snowboard, prop: any, receiver: unknown) {
         if (typeof prop === 'string') {
             const propLower = prop.toLowerCase();
 
@@ -18,7 +20,7 @@ export default {
             }
 
             if (target.hasPlugin(propLower)) {
-                return (...params) => Reflect.get(target, 'plugins')
+                return (...params: any[]) => Reflect.get(target, 'plugins')
                     .get(propLower)
                     .getInstance(...params);
             }
@@ -27,7 +29,7 @@ export default {
         return Reflect.get(target, prop, receiver);
     },
 
-    has(target, prop) {
+    has(target: Snowboard, prop: any) {
         if (typeof prop === 'string') {
             const propLower = prop.toLowerCase();
 

@@ -9,9 +9,11 @@ import Singleton from '../abstracts/Singleton';
  * @author Ben Thomson <git@alfreido.com>
  */
 export default class Url extends Singleton {
+    #foundBaseUrl: string = '';
+
+    #foundAssetUrl: string = '';
+
     construct() {
-        this.foundBaseUrl = null;
-        this.foundAssetUrl = null;
         this.determineUrls();
     }
 
@@ -19,11 +21,8 @@ export default class Url extends Singleton {
      * Gets a URL based on a relative path.
      *
      * If an absolute URL is provided, it will be returned unchanged.
-     *
-     * @param {string} url
-     * @returns {string}
      */
-    to(url) {
+    to(url: string): string {
         const urlRegex = /^(?:[^:]+:\/\/)[-a-z0-9@:%._+~#=]{1,256}\b([-a-z0-9()@:%_+.~#?&//=]*)/i;
 
         if (url.match(urlRegex)) {
@@ -39,11 +38,8 @@ export default class Url extends Singleton {
      * Gets an Asset URL based on a relative path.
      *
      * If an absolute URL is provided, it will be returned unchanged.
-     *
-     * @param {string} url
-     * @returns {string}
      */
-    asset(url) {
+    asset(url: string): string {
         const urlRegex = /^(?:[^:]+:\/\/)[-a-z0-9@:%._+~#=]{1,256}\b([-a-z0-9()@:%_+.~#?&//=]*)/i;
 
         if (url.match(urlRegex)) {
@@ -57,20 +53,16 @@ export default class Url extends Singleton {
 
     /**
      * Gets the base URL.
-     *
-     * @returns {string}
      */
-    baseUrl() {
-        return this.foundBaseUrl;
+    baseUrl(): string {
+        return this.#foundBaseUrl;
     }
 
     /**
      * Sets the base URL on the fly.
-     *
-     * @returns {string}
      */
-    setBaseUrl(url) {
-        this.foundBaseUrl = this.validateBaseUrl(url);
+    setBaseUrl(url: string): void {
+        this.#foundBaseUrl = this.validateBaseUrl(url);
     }
 
     /**
@@ -78,17 +70,15 @@ export default class Url extends Singleton {
      *
      * @returns {string}
      */
-    assetUrl() {
-        return this.foundAssetUrl;
+    assetUrl(): string {
+        return this.#foundAssetUrl;
     }
 
     /**
      * Sets the asset URL on the fly.
-     *
-     * @returns {string}
      */
-    setAssetUrl(url) {
-        this.foundAssetUrl = this.validateBaseUrl(url);
+    setAssetUrl(url: string): void {
+        this.#foundAssetUrl = this.validateBaseUrl(url);
     }
 
     /**
@@ -103,33 +93,28 @@ export default class Url extends Singleton {
      *    for sites that reside in subdirectories.
      *
      * The base URL will always contain a trailing backslash.
-     *
-     * @returns {string}
      */
-    determineUrls() {
+    determineUrls(): void {
         if (document.currentScript && document.currentScript.dataset.baseUrl) {
-            this.foundBaseUrl = this.validateBaseUrl(document.currentScript.dataset.baseUrl);
+            this.#foundBaseUrl = this.validateBaseUrl(document.currentScript.dataset.baseUrl);
         }
         if (document.currentScript && document.currentScript.dataset.assetUrl) {
-            this.foundAssetUrl = this.validateBaseUrl(document.currentScript.dataset.assetUrl);
+            this.#foundAssetUrl = this.validateBaseUrl(document.currentScript.dataset.assetUrl);
         }
 
         if (document.querySelector('base')) {
-            if (!this.foundBaseUrl) {
-                this.foundBaseUrl = this.validateBaseUrl(
-                    document.querySelector('base').getAttribute('href'),
+            if (!this.#foundBaseUrl) {
+                this.#foundBaseUrl = this.validateBaseUrl(
+                    document.querySelector('base')?.getAttribute('href') || '',
                 );
-            }
-            if (!this.foundAssetUrl) {
-                this.foundAssetUrl = this.foundBaseUrl;
             }
         }
 
-        if (!this.foundBaseUrl) {
-            this.foundBaseUrl = this.validateBaseUrl(window.location.origin);
+        if (!this.#foundBaseUrl) {
+            this.#foundBaseUrl = this.validateBaseUrl(window.location.origin);
         }
-        if (!this.foundAssetUrl) {
-            this.foundAssetUrl = this.foundBaseUrl;
+        if (!this.#foundAssetUrl) {
+            this.#foundAssetUrl = this.#foundBaseUrl;
         }
     }
 
@@ -138,21 +123,27 @@ export default class Url extends Singleton {
      *
      * If the Snowboard script or <base> tag on the page use a different type of URL, this will fail
      * with an error.
-     *
-     * @param {string} url
-     * @returns {string}
      */
-    validateBaseUrl(url) {
+    validateBaseUrl(url: string): string {
+        if (url === '') {
+            return '';
+        }
+
         const urlRegex = /^(([^:/?#]+):)?(\/\/([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/i;
         const urlParts = urlRegex.exec(url);
+
+        if (!urlParts) {
+            throw new Error('Invalid base URL detected - could not parse URL');
+        }
+
         const protocol = urlParts[2];
         const domain = urlParts[4];
 
         if (protocol && ['http', 'https'].indexOf(protocol.toLowerCase()) === -1) {
-            throw new Error('Invalid base URL detected');
+            throw new Error('Invalid base URL detected - must be HTTP or HTTPS');
         }
         if (!domain) {
-            throw new Error('Invalid base URL detected');
+            throw new Error('Invalid base URL detected - must contain a domain');
         }
 
         return (url.endsWith('/'))

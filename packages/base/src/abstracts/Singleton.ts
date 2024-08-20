@@ -1,3 +1,5 @@
+import type PluginInterface from '../interfaces/PluginInterface';
+import type Snowboard from '../main/Snowboard';
 import PluginBase from './PluginBase';
 
 /**

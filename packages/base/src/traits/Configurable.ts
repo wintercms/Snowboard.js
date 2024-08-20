@@ -1,3 +1,6 @@
+import Trait from '../abstracts/Trait';
+import type TraitInterface from '../interfaces/TraitInterface';
+
 /**
  * Data configuration provider.
  *
@@ -6,31 +9,21 @@
  *
  * @copyright 2022 Winter.
  * @author Ben Thomson <git@alfreido.com>
+ * @mixin
  */
-export default class Configurable {
-    /**
-     * Trait constructor and definition.
-     */
-    constructor() {
-        this.instanceConfig = {};
-        this.acceptedConfigs = {};
-    }
+export default class Configurable extends Trait {
+    instanceConfig: { [key: string]: any } = {};
+    acceptedConfigs: boolean | string[] = false;
+    acceptAllDataConfigs: boolean | undefined;
+    element: HTMLElement | undefined;
 
     /**
      * Instance constructor.
      */
-    construct(options) {
+    construct() {
         if (this.element instanceof HTMLElement === false) {
             throw new Error('Data configuration can only be extracted from HTML elements');
         }
-
-        // Lock acceptAllDataConfigs to prevent it from being changed externally
-        Object.defineProperty(this, 'acceptAllDataConfigs', {
-            enumerable: true,
-            writable: false,
-            configurable: false,
-            value: (options.acceptAllDataConfigs || false),
-        });
 
         this.refreshConfig();
     }
@@ -46,10 +39,8 @@ export default class Configurable {
      * Gets the config for this instance.
      *
      * If the `config` parameter is unspecified, returns the entire configuration.
-     *
-     * @param {string} config
      */
-    getConfig(config) {
+    getConfig(config?: string): any {
         if (config === undefined) {
             return this.instanceConfig;
         }
@@ -65,14 +56,10 @@ export default class Configurable {
      * Sets the config for this instance.
      *
      * This allows you to override, at runtime, any configuration value as necessary.
-     *
-     * @param {string} config
-     * @param {any} value
-     * @param {boolean} persist
      */
-    setConfig(config, value, persist) {
-        if (config === undefined) {
-            throw new Error('You must provide a configuration key to set');
+    setConfig(config: string, value: any, persist: boolean = false): void {
+        if (!this.element) {
+            return;
         }
 
         this.instanceConfig[config] = value;
@@ -88,7 +75,7 @@ export default class Configurable {
      * This will allow you to make changes to the data config on a DOM level and re-apply them
      * to the config on the JavaScript side.
      */
-    refreshConfig() {
+    refreshConfig(): void {
         this.acceptedConfigs = this.getAcceptedConfigs();
         this.instanceConfig = this.processConfig();
     }
@@ -102,10 +89,8 @@ export default class Configurable {
      *
      * Otherwise, available configurations will be determined by the keys available in an object
      * returned by a `defaults()` method in the instance.
-     *
-     * @returns {string[]|boolean}
      */
-    getAcceptedConfigs() {
+    getAcceptedConfigs(): string[] | boolean {
         if (
             this.acceptAllDataConfigs !== undefined
             && this.acceptAllDataConfigs === true
@@ -128,7 +113,7 @@ export default class Configurable {
      *
      * @returns {object}
      */
-    getDefaultConfig() {
+    getDefaultConfig(): { [key: string]: any } {
         if (typeof this.defaults() === 'object') {
             return this.defaults();
         }
@@ -149,17 +134,15 @@ export default class Configurable {
     processConfig() {
         const config = this.getDefaultConfig();
 
-        if (this.acceptedConfigs === false) {
+        if (this.acceptedConfigs === false || !this.element) {
             return config;
         }
 
-        /* eslint-disable */
         for (const key in this.element.dataset) {
             if (this.acceptedConfigs === true || this.acceptedConfigs.includes(key)) {
                 config[key] = this.coerceConfigValue(this.element.dataset[key], config[key]);
             }
         }
-        /* eslint-enable */
 
         return config;
     }
@@ -169,12 +152,8 @@ export default class Configurable {
      *
      * Takes the string value returned from the data attribute and coerces it into a more suitable
      * type for JavaScript processing.
-     *
-     * @param {*} value
-     * @param {*} defaultValue
-     * @returns {*}
      */
-    coerceConfigValue(value, defaultValue) {
+    coerceConfigValue(value: any, defaultValue?: any): any {
         const stringValue = String(value);
 
         // Null value

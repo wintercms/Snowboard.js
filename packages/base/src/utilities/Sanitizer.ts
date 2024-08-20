@@ -17,27 +17,20 @@ import Singleton from '../abstracts/Singleton';
 export default class Sanitizer extends Singleton {
     /**
      * Sanitizes a HTML string.
-     *
-     * @param {string} html
-     * @param {boolean} bodyOnly
-     * @returns {string}
      */
-    sanitize(html, bodyOnly = true) {
+    sanitize(html: string, bodyOnly: boolean = true): string {
         const parser = new DOMParser();
         const dom = parser.parseFromString(html, 'text/html');
 
-        this.sanitizeNode(dom.getRootNode());
+        this.sanitizeNode(dom.getRootNode() as Element);
 
         return (bodyOnly) ? dom.body.innerHTML : dom.documentElement.outerHTML;
     }
 
     /**
      * Sanitizes an individual node.
-     *
-     * @param {Node} node
-     * @returns {void}
      */
-    sanitizeNode(node) {
+    sanitizeNode(node: Element): void {
         if (['SCRIPT', 'IFRAME', 'OBJECT'].includes(node.tagName)) {
             node.remove();
             return;
@@ -54,18 +47,19 @@ export default class Sanitizer extends Singleton {
 
     /**
      * Sanitizes the attributes of a node.
-     *
-     * @param {Node} node
-     * @returns {void}
      */
-    trimAttributes(node) {
+    trimAttributes(node: Element): void {
         if (!node.attributes) {
             return;
         }
 
         for (let i = 0; i < node.attributes.length; i += 1) {
-            const attrName = node.attributes.item(i).name;
-            const attrValue = node.attributes.item(i).value;
+            const attrName = node.attributes.item(i)?.name;
+            const attrValue = node.attributes.item(i)?.value;
+
+            if (!attrName || !attrValue) {
+                continue;
+            }
 
             /*
             * remove attributes where the names start with "on" (for example: onload, onerror...)

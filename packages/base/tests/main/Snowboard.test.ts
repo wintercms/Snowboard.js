@@ -1,17 +1,21 @@
+// @vitest-environment jsdom
+
+import { describe, beforeEach, afterEach, it, expect } from 'vitest';
+
 import TestInstance from '../../src/main/Snowboard';
-import TestPlugin from '../fixtures/framework/TestPlugin';
-import TestSingleton from '../fixtures/framework/TestSingleton';
-import TestListener from '../fixtures/framework/TestListener';
-import TestClosureListener from '../fixtures/framework/TestClosureListener';
-import TestPromiseListener from '../fixtures/framework/TestPromiseListener';
-import TestPromiseClosureListener from '../fixtures/framework/TestPromiseClosureListener';
-import TestHasDependencies from '../fixtures/framework/TestHasDependencies';
-import TestDependencyOne from '../fixtures/framework/TestDependencyOne';
-import TestDependencyTwo from '../fixtures/framework/TestDependencyTwo';
-import TestSingletonWithDependency from '../fixtures/framework/TestSingletonWithDependency';
-import TestSingletonWithReady from '../fixtures/framework/TestSingletonWithReady';
-import TestTrait from '../fixtures/framework/TestTrait';
-import TestNotPlugin from '../fixtures/framework/TestNotPlugin';
+import TestPlugin from '../fixtures/framework/TestPlugin.js';
+import TestSingleton from '../fixtures/framework/TestSingleton.js';
+import TestListener from '../fixtures/framework/TestListener.js';
+import TestClosureListener from '../fixtures/framework/TestClosureListener.js';
+import TestPromiseListener from '../fixtures/framework/TestPromiseListener.js';
+import TestPromiseClosureListener from '../fixtures/framework/TestPromiseClosureListener.js';
+import TestHasDependencies from '../fixtures/framework/TestHasDependencies.js';
+import TestDependencyOne from '../fixtures/framework/TestDependencyOne.js';
+import TestDependencyTwo from '../fixtures/framework/TestDependencyTwo.js';
+import TestSingletonWithDependency from '../fixtures/framework/TestSingletonWithDependency.js';
+import TestSingletonWithReady from '../fixtures/framework/TestSingletonWithReady.js';
+import TestTrait from '../fixtures/framework/TestTrait.js';
+import TestNotPlugin from '../fixtures/framework/TestNotPlugin.js';
 
 describe('Snowboard framework', () => {
     beforeEach(() => {

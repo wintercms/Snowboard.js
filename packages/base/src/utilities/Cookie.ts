@@ -11,70 +11,48 @@ import Singleton from '../abstracts/Singleton';
  * @author Ben Thomson <git@alfreido.com>
  */
 export default class Cookie extends Singleton {
-    construct() {
-        this.defaults = {
-            expires: null,
-            path: '/',
-            domain: null,
-            secure: false,
-            sameSite: 'Lax',
-        };
-    }
+    #defaults: Cookies.CookieAttributes = {
+        expires: undefined,
+        path: '/',
+        domain: undefined,
+        secure: false,
+        sameSite: 'Lax',
+    };
 
     /**
      * Set the default cookie parameters for all subsequent "set" and "remove" calls.
-     *
-     * @param {Object} options
      */
-    setDefaults(options) {
+    setDefaults(options?: Cookies.CookieAttributes): void {
         if (typeof options !== 'object') {
             throw new Error('Cookie defaults must be provided as an object');
         }
 
-        Object.entries(options).forEach((entry) => {
-            const [key, value] = entry;
-
-            if (this.defaults[key] !== undefined) {
-                this.defaults[key] = value;
-            }
-        });
+        this.#defaults = {
+            ...this.#defaults,
+            ...options,
+        };
     }
 
     /**
      * Get the current default cookie parameters.
-     *
-     * @returns {Object}
      */
     getDefaults() {
-        const defaults = {};
-
-        Object.entries(this.defaults).forEach((entry) => {
-            const [key, value] = entry;
-
-            if (this.defaults[key] !== null) {
-                defaults[key] = value;
-            }
-        });
-
-        return defaults;
+        return this.#defaults;
     }
 
     /**
      * Get a cookie by name.
      *
      * If `name` is undefined, returns all cookies as an Object.
-     *
-     * @param {String} name
-     * @returns {Object|String}
      */
-    get(name) {
+    get(name: string | undefined): string | { [key: string]: string } | undefined {
         if (name === undefined) {
             const cookies = BaseCookie.get();
 
             Object.entries(cookies).forEach((entry) => {
                 const [cookieName, cookieValue] = entry;
 
-                this.snowboard.globalEvent('cookie.get', cookieName, cookieValue, (newValue) => {
+                this.snowboard.globalEvent('cookie.get', cookieName, cookieValue, (newValue: string) => {
                     cookies[cookieName] = newValue;
                 });
             });
@@ -85,7 +63,7 @@ export default class Cookie extends Singleton {
         let value = BaseCookie.get(name);
 
         // Allow plugins to override the gotten value
-        this.snowboard.globalEvent('cookie.get', name, value, (newValue) => {
+        this.snowboard.globalEvent('cookie.get', name, value, (newValue: string) => {
             value = newValue;
         });
 
@@ -96,17 +74,12 @@ export default class Cookie extends Singleton {
      * Set a cookie by name.
      *
      * You can specify additional cookie parameters through the "options" parameter.
-     *
-     * @param {String} name
-     * @param {String} value
-     * @param {Object} options
-     * @returns {String}
      */
-    set(name, value, options) {
+    set(name: string, value: string, options?: Cookies.CookieAttributes): string | undefined {
         let saveValue = value;
 
         // Allow plugins to override the value to save
-        this.snowboard.globalEvent('cookie.set', name, value, (newValue) => {
+        this.snowboard.globalEvent('cookie.set', name, value, (newValue: string) => {
             saveValue = newValue;
         });
 
@@ -120,12 +93,8 @@ export default class Cookie extends Singleton {
      * Remove a cookie by name.
      *
      * You can specify the additional cookie parameters via the "options" parameter.
-     *
-     * @param {String} name
-     * @param {Object} options
-     * @returns {void}
      */
-    remove(name, options) {
+    remove(name: string, options?: Cookies.CookieAttributes): void {
         BaseCookie.remove(name, {
             ...this.getDefaults(),
             ...options,

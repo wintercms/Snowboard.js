@@ -1,38 +1,31 @@
+import type Snowboard from '../main/Snowboard';
+import type TraitInterface from './TraitInterface';
+
 /**
- * Plugin base abstract.
+ * Plugin interface.
  *
- * This class provides the base functionality for all plugins.
- *
- * @copyright 2021 Winter.
- * @author Ben Thomson <git@alfreido.com>
+ * Represents the expected makeup of a plugin in Snowboard, and used for type-hinting.
  */
-export default class PluginBase {
+export default interface PluginInterface {
     /**
-     * Constructor.
-     *
-     * The constructor is provided the Snowboard framework instance, and should not be overwritten
-     * unless you absolutely know what you're doing.
-     *
-     * @param {Snowboard} snowboard
+     * Snowboard instance.
      */
-    constructor(snowboard) {
-        this.snowboard = snowboard;
-        this.destructed = false;
-    }
+    snowboard: Snowboard;
+
+    /**
+     * Is this plugin instance destructed?
+     */
+    destructed: boolean;
 
     /**
      * Gets the Snowboard instance that this plugin is attached to.
      */
-    getSnowboard() {
-        return this.snowboard;
-    }
+    getSnowboard(): Snowboard;
 
     /**
      * Determines if this plugin is a singleton.
      */
-    isSingleton() {
-        return false;
-    }
+    isSingleton(): boolean;
 
     /**
      * Plugin constructor.
@@ -41,8 +34,7 @@ export default class PluginBase {
      * It will be called straight after construction, but before traits are loaded, allowing you
      * to define any required properties needed for the traits.
      */
-    construct() {
-    }
+    construct(...parameters: any[]): void;
 
     /**
      * Plugin initializer.
@@ -51,26 +43,24 @@ export default class PluginBase {
      * used to run any functionality that you want available immediately after the plugin instance
      * is ready to use.
      */
-    init() {
-    }
+    init(): void;
 
     /**
      * Defines the required plugins for this specific module to work.
      *
      * @returns {string[]} An array of plugins required for this module to work, as strings.
      */
-    dependencies() {
-        return [];
-    }
+    dependencies(): string[];
+
+    /**
+     * Defines the traits for this plugin.
+     */
+    traits(): string[];
 
     /**
      * Defines the listener methods for global events.
-     *
-     * @returns {Object}
      */
-    listens() {
-        return {};
-    }
+    listens(): { [key: string]: string | Function };
 
     /**
      * Plugin destructor.
@@ -80,8 +70,12 @@ export default class PluginBase {
      *
      * This method should be treated as the true destructor of a plugin, and can be overwritten.
      */
-    destruct() {
-    }
+    destruct(): void;
+
+    /**
+     * Stub detach method. This method is overwritten by the Plugin loader.
+     */
+    detach(): void;
 
     /**
      * Plugin destructor (core)
@@ -89,10 +83,5 @@ export default class PluginBase {
      * The destructor calls some necessary destruction steps, and should not be overwritten
      * unless you absolutely know what you're doing.
      */
-    destructor() {
-        this.destruct();
-        this.detach();
-        delete this.snowboard;
-        this.destructed = true;
-    }
+    destructor(): void;
 }

@@ -1,6 +1,14 @@
 import JSON5 from 'json5';
 import Singleton from '../abstracts/Singleton';
 
+interface JsonTokens {
+    keys: string[];
+    values: any[];
+    strings: string[];
+    objects: any[];
+    arrays: any[];
+}
+
 /**
  * JSON Parser utility.
  *
@@ -32,12 +40,8 @@ export default class JsonParser extends Singleton {
      *
      * If `strict` is true, it will not try and correct any missing object or array boundaries on
      * the root element, and will instead assume a string has been given from the outset.
-     *
-     * @param {string} str
-     * @param {boolean} strict
-     * @returns {any}
      */
-    parse(str, strict = false) {
+    parse(str: string, strict: boolean = false): any {
         // Handle special cases
         if (str === 'undefined') {
             return undefined;
@@ -56,14 +60,10 @@ export default class JsonParser extends Singleton {
 
     /**
      * Prepares a string for a second-pass at parsing.
-     *
-     * @param {string} str
-     * @param {boolean} strict
-     * @returns {string}
      */
-    prepareString(str, strict) {
+    prepareString(str: string, strict: boolean): string {
         // Tokenize the string before we process further
-        const tokens = {
+        const tokens: JsonTokens = {
             keys: [],
             values: [],
             strings: [],
@@ -90,12 +90,8 @@ export default class JsonParser extends Singleton {
 
     /**
      * Tokenizes JSON boundaries in a string.
-     *
-     * @param {string} str
-     * @param {Object} tokens
-     * @returns {string}
      */
-    tokenize(str, tokens) {
+    tokenize(str: string, tokens: JsonTokens): string {
         const tokenized = str.trim().replace(/('[^']+'|"[^"]+"|\{.*?\}\s*(?=[,{\]]|$)|\[.*\]\s*(?=[,{\]]|$))/gs, (match) => {
             const trimmed = match.trim();
 
@@ -164,7 +160,7 @@ export default class JsonParser extends Singleton {
      * @param {Object} tokens
      * @returns {string}
      */
-    detokenize(tokenized, tokens) {
+    detokenize(tokenized: string, tokens: JsonTokens): string {
         return tokenized.replace(/__([A-Z]{3})\$\((\d+)\)__/g, (match, tokenCode, tokenIndex) => {
             switch (tokenCode) {
                 case 'STR':

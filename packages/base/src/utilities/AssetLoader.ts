@@ -20,22 +20,12 @@ import Singleton from '../abstracts/Singleton';
  * @author Ben Thomson <git@alfreido.com>
  */
 export default class AssetLoader extends Singleton {
-    /**
-     * Event listeners.
-     *
-     * @returns {Object}
-     */
     listens() {
         return {
             ajaxLoadAssets: 'load',
         };
     }
 
-    /**
-     * Dependencies.
-     *
-     * @returns {Array}
-     */
     dependencies() {
         return [
             'url',
@@ -56,13 +46,8 @@ export default class AssetLoader extends Singleton {
      *
      * This method will return a Promise that resolves when all required assets are loaded. If an
      * asset fails to load, this Promise will be rejected.
-     *
-     * ESLint *REALLY* doesn't like this code, but ignore it. It's the only way it works.
-     *
-     * @param {Object} assets
-     * @returns {Promise}
      */
-    load(assets) {
+    load(assets: { js?: string | string[], css?: string | string[], img?: string | string[] }): Promise<void[]> {
         const promises = [];
 
         if (assets.js) {
@@ -106,7 +91,7 @@ export default class AssetLoader extends Singleton {
      * @param {String} script
      * @returns {Promise}
      */
-    loadScript(script) {
+    loadScript(script: string): Promise<void> {
         return new Promise((resolve, reject) => {
             // Resolve script URL
             const scriptUrl = this.snowboard.url().asset(script);
@@ -138,11 +123,8 @@ export default class AssetLoader extends Singleton {
      * Injects and loads a CSS stylesheet into the DOM.
      *
      * The stylesheet will be appended before the closing `</head>` tag.
-     *
-     * @param {String} style
-     * @returns {Promise}
      */
-    loadStyle(style) {
+    loadStyle(style: string): Promise<void> {
         return new Promise((resolve, reject) => {
             // Resolve style URL
             const styleUrl = this.snowboard.url().asset(style);
@@ -174,11 +156,8 @@ export default class AssetLoader extends Singleton {
      * Pre-loads an image.
      *
      * The image will not be injected into the DOM.
-     *
-     * @param {String} image
-     * @returns {Promise}
      */
-    loadImage(image) {
+    loadImage(image: string): Promise<void> {
         return new Promise((resolve, reject) => {
             // Resolve script URL
             const imageUrl = this.snowboard.url().asset(image);

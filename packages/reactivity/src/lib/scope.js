@@ -30,6 +30,7 @@ function getMappableProperties() {
         'init',
         'destruct',
         'destructor',
+        'destructed',
         'detach',
         'template',
         'mountTo',

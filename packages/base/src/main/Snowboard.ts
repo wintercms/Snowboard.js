@@ -10,6 +10,7 @@ import Cookie from '../utilities/Cookie';
 import JsonParser from '../utilities/JsonParser';
 import Sanitizer from '../utilities/Sanitizer';
 import Url from '../utilities/Url';
+import type TraitInterface from '../interfaces/TraitInterface';
 
 /**
  * Snowboard.js framework.
@@ -28,46 +29,47 @@ import Url from '../utilities/Url';
  */
 export default class Snowboard {
     /**
+     * Whether debugging logs should be shown.
+     */
+    debugEnabled: boolean = false;
+
+    /**
+     * Registered plugins.
+     */
+    private plugins: Map<string, PluginLoader> = new Map();
+
+    /**
+     * Registered abstracts.
+     */
+    private abstracts: Map<string, object> = new Map();
+
+    /**
+     * Registered traits.
+     */
+    private traits: Map<string, TraitInterface> = new Map();
+
+    /**
+     * Listeners, keyed by event name.
+     */
+    private listeners: Map<string, Function[]> = new Map();
+
+    /**
+     * Readiness tracking for the framework.
+     */
+    private readiness: { dom: boolean } = { dom: false };
+
+    /**
      * Constructor.
      *
      * @param {boolean} debug Whether debugging logs should be shown. Default: `false`.
      */
-    constructor(debug) {
+    constructor(debug: boolean = false) {
         /**
          * Whether debugging logs should be shown.
          * @type {boolean}
          */
-        this.debugEnabled = (typeof debug === 'boolean' && debug === true);
-        /**
-         * Registered plugins.
-         * @type {Map.<string, PluginLoader>}
-         */
-        this.plugins = new Map();
-        /**
-         * Registered abstracts.
-         * @type {Map.<string, object>}
-         */
-        this.abstracts = new Map();
-        /**
-         * Registered traits.
-         * @type {Map.<string, object>}
-         */
-        this.traits = new Map();
-        /**
-         * Listeners, keyed by event name.
-         * @type {Map.<string, Array.<function>}
-         */
-        this.listeners = new Map();
-        /**
-         * Readiness tracking for the framework.
-         * @type {{dom: boolean}}
-         */
-        this.readiness = {
-            dom: false,
-        };
+        this.debugEnabled = debug;
 
-        // Seal readiness from being added to further, but allow the properties to be modified.
-        Object.seal(this.readiness);
         this.attachAbstracts();
 
         // Freeze the Snowboard class to prevent further modifications.
@@ -96,10 +98,8 @@ export default class Snowboard {
      *     ...
      * }
      * ```
-     *
-     * @return {void}
      */
-    attachAbstracts() {
+    private attachAbstracts(): void {
         this.addAbstract('PluginBase', PluginBase);
         this.addAbstract('Singleton', Singleton);
     }
@@ -116,12 +116,8 @@ export default class Snowboard {
      * base classes. Abstracts also cannot be removed once added.
      *
      * Please note that, unlike plugins, abstracts are case-sensitive.
-     *
-     * @param {string} name
-     * @param {Object} instance
-     * @return {void}
      */
-    addAbstract(name, instance) {
+    addAbstract(name: string, instance: object): void {
         if (this.hasPlugin(name) || this.hasAbstract(name)) {
             throw new Error(`A plugin or abstract called "${name}" is already registered.`);
         }
@@ -133,40 +129,32 @@ export default class Snowboard {
             throw new Error('The provided abstract must extend the PluginBase class');
         }
 
-        const lowerName = name.toLowerCase();
-
-        if (this[name] !== undefined || this[lowerName] !== undefined) {
+        if (Reflect.ownKeys(this).includes(name)) {
             throw new Error('The given name is already in use for a property or method of the Snowboard class.');
         }
 
         Object.freeze(instance);
-        Object.freeze(instance.prototype);
         this.abstracts.set(name, instance);
     }
 
     /**
      * Determines if an abstract of the given name is available.
-     *
-     * @param {string} name
-     * @return {boolean}
      */
-    hasAbstract(name) {
+    hasAbstract(name: string): boolean {
         return this.abstracts.has(name);
     }
 
     /**
      * Loads the default traits and utilities.
-     *
-     * @return {void}
      */
-    loadInbuilt() {
-        this.registerTrait('configurable', Configurable);
-        this.registerTrait('firesEvents', FiresEvents);
-        this.addPlugin('assetLoader', AssetLoader);
-        this.addPlugin('cookie', Cookie);
-        this.addPlugin('jsonParser', JsonParser);
-        this.addPlugin('sanitizer', Sanitizer);
-        this.addPlugin('url', Url);
+    private loadInbuilt(): void {
+        this.registerTrait('configurable', Configurable.prototype);
+        this.registerTrait('firesEvents', FiresEvents.prototype);
+        this.addPlugin('assetLoader', AssetLoader.prototype);
+        this.addPlugin('cookie', Cookie.prototype);
+        this.addPlugin('jsonParser', JsonParser.prototype);
+        this.addPlugin('sanitizer', Sanitizer.prototype);
+        this.addPlugin('url', Url.prototype);
     }
 
     /**
@@ -176,10 +164,8 @@ export default class Snowboard {
      * to begin attaching themselves to the DOM.
      *
      * If no window is found, the framework is considered ready immediately.
-     *
-     * @return {void}
      */
-    initialise() {
+    private initialise(): void {
         const ready = () => {
             this.initialiseSingletons();
             this.globalEvent('ready');
@@ -200,10 +186,8 @@ export default class Snowboard {
      * destruct all plugins and tear down the app into a clean slate.
      *
      * This will also remove all registered plugins, abstracts, and traits.
-     *
-     * @return {void}
      */
-    tearDown() {
+    tearDown(): void {
         this.plugins.forEach((plugin, name) => {
             plugin.getInstances().forEach((instance) => {
                 instance.destructor();
@@ -221,7 +205,7 @@ export default class Snowboard {
      *
      * @return {void}
      */
-    initialiseSingletons() {
+    private initialiseSingletons() {
         this.plugins.forEach((plugin) => {
             if (plugin.isSingleton() && plugin.dependenciesFulfilled()) {
                 plugin.initialiseSingleton();
@@ -242,12 +226,8 @@ export default class Snowboard {
      *
      * For example, if a plugin is assigned to the name "myPlugin", it can be called via
      * `Snowboard.myplugin()`.
-     *
-     * @param {string} name
-     * @param {PluginBase} instance
-     * @return {void}
      */
-    addPlugin(name, instance) {
+    addPlugin(name: string, instance: PluginBase): void {
         if (this.hasPlugin(name) || this.hasAbstract(name)) {
             throw new Error(`A plugin or abstract called "${name}" is already registered.`);
         }
@@ -258,7 +238,7 @@ export default class Snowboard {
 
         const lowerName = name.toLowerCase();
 
-        if (this[name] !== undefined || this[lowerName] !== undefined) {
+        if (Object.getPrototypeOf(this)[name] !== undefined || Object.getPrototypeOf(this)[lowerName] !== undefined) {
             throw new Error('The given name is already in use for a property or method of the Snowboard class.');
         }
 
@@ -268,7 +248,7 @@ export default class Snowboard {
 
         // Check if any singletons now have their dependencies fulfilled, and fire their "ready"
         // handler if we're in a ready state.
-        Object.values(this.getPlugins()).forEach((plugin) => {
+        Object.values(this.getPlugins()).forEach((plugin: PluginLoader) => {
             if (
                 plugin.isSingleton()
                 && !plugin.isInitialised()
@@ -292,7 +272,7 @@ export default class Snowboard {
      * @param {string} name
      * @return {void}
      */
-    removePlugin(name) {
+    removePlugin(name: string): void {
         if (!this.hasPlugin(name)) {
             this.debug(`Plugin "${name}" doesn't exist or is already removed`);
             return;
@@ -301,7 +281,7 @@ export default class Snowboard {
         const lowerName = name.toLowerCase();
 
         // Call destructors for all instances
-        this.plugins.get(lowerName).getInstances().forEach((instance) => {
+        this.plugins.get(lowerName)?.getInstances().forEach((instance) => {
             instance.destructor();
         });
 
@@ -314,11 +294,8 @@ export default class Snowboard {
      * Determines if a plugin has been registered and is active.
      *
      * A plugin that is still waiting for dependencies to be registered will not be active.
-     *
-     * @param {string} name
-     * @return {boolean}
      */
-    hasPlugin(name) {
+    hasPlugin(name: string): boolean {
         const lowerName = name.toLowerCase();
 
         return this.plugins.has(lowerName);
@@ -326,33 +303,27 @@ export default class Snowboard {
 
     /**
      * Returns an array of registered plugins as PluginLoader objects.
-     *
-     * @return {Map.<string, PluginLoader>}
      */
-    getPlugins() {
+    getPlugins(): Map<string, PluginLoader> {
         return this.plugins;
     }
 
     /**
      * Returns an array of registered plugins, by name.
-     *
-     * @return {string[]}
      */
-    getPluginNames() {
+    getPluginNames(): string[] {
         return Array.from(this.plugins.keys());
     }
 
     /**
      * Returns a PluginLoader object of a given plugin.
-     *
-     * @return {PluginLoader}
      */
-    getPlugin(name) {
-        if (!this.hasPlugin(name)) {
+    getPlugin(name: string): PluginLoader {
+        if (!this.plugins.has(name)) {
             throw new Error(`No plugin called "${name}" has been registered.`);
         }
 
-        return this.plugins.get(name.toLowerCase());
+        return this.plugins.get(name.toLowerCase())!;
     }
 
     /**
@@ -360,18 +331,27 @@ export default class Snowboard {
      *
      * This is a simple API check because some build processes muck up the prototype chain and
      * prevent the usage of "instanceof" to check against the `PluginBase` class.
-     *
-     * @param {*} instance
      */
-    isPluginBase(instance) {
+    isPluginBase(instance: any): boolean {
         const methods = new Set();
-        let obj = instance.prototype;
 
-        Reflect.ownKeys(obj).forEach((key) => methods.add(key));
+        Reflect.ownKeys(instance).forEach((key) => {
+            if (typeof instance[key] !== 'function') {
+                return;
+            }
 
-        while (Reflect.getPrototypeOf(obj)) {
-            obj = Reflect.getPrototypeOf(obj);
-            Reflect.ownKeys(obj).forEach((key) => methods.add(key));
+            methods.add(key);
+        });
+
+        while (Reflect.getPrototypeOf(instance)) {
+            instance = Reflect.getPrototypeOf(instance);
+            Reflect.ownKeys(instance).forEach((key) => {
+                if (typeof instance[key] !== 'function') {
+                    return;
+                }
+
+                methods.add(key);
+            });
         }
 
         if (
@@ -397,23 +377,15 @@ export default class Snowboard {
      * initialization of a plugin or singleton instance, after the instance is constructed, all
      * traits that are to be used will also be constructed, and their methods and properties will
      * be merged into the plugin instance.
-     *
-     * @param {string} name
-     * @param {Object} instance
-     * @return {void}
      */
-    registerTrait(name, instance) {
+    registerTrait(name: string, instance: TraitInterface): void {
         if (this.hasTrait(name)) {
             throw new Error(`A trait called "${name}" is already registered.`);
         }
 
-        if (typeof instance !== 'function') {
-            throw new Error('The provided trait must be a class.');
-        }
-
         const lowerName = name.toLowerCase();
 
-        if (this[name] !== undefined || this[lowerName] !== undefined) {
+        if (Object.getPrototypeOf(this)[name] !== undefined || Object.getPrototypeOf(this)[lowerName] !== undefined) {
             throw new Error('The given name is already in use for a property or method of the Snowboard class.');
         }
 
@@ -424,11 +396,8 @@ export default class Snowboard {
 
     /**
      * Determines if a trait has been registered.
-     *
-     * @param {string} name
-     * @return {boolean}
      */
-    hasTrait(name) {
+    hasTrait(name: string): boolean {
         const lowerName = name.toLowerCase();
 
         return this.traits.has(lowerName);
@@ -436,26 +405,22 @@ export default class Snowboard {
 
     /**
      * Returns an array of registered traits as individual class objects.
-     *
-     * @return {Map.<string, object>}
      */
-    getTraits() {
+    getTraits(): Map<string, object> {
         return this.traits;
     }
 
     /**
      * Returns the prototype of the given trait.
-     *
-     * @return {Object}
      */
-    getTrait(name) {
+    getTrait(name: string): TraitInterface {
         if (!this.hasTrait(name)) {
             throw new Error(`No trait called "${name}" has been registered.`);
         }
 
         const lowerName = name.toLowerCase();
 
-        return this.traits.get(lowerName);
+        return this.traits.get(lowerName)!;
     }
 
     /**
@@ -464,11 +429,10 @@ export default class Snowboard {
      * This works for both normal and promise events. It does *not* check that the plugin's listener
      * actually exists.
      *
-     * @param {string} eventName
      * @return {string[]} The name of the plugins that are listening to this event.
      */
-    listensToEvent(eventName) {
-        const plugins = [];
+    listensToEvent(eventName: string): string[] {
+        const plugins: string[] = [];
 
         this.plugins.forEach((plugin, name) => {
             if (!plugin.dependenciesFulfilled()) {
@@ -490,11 +454,8 @@ export default class Snowboard {
      *
      * Synonymous with jQuery's "$(document).ready()" functionality, this allows inline scripts to
      * attach themselves to Snowboard immediately but only fire when the DOM is ready.
-     *
-     * @param {Function} callback
-     * @return {void}
      */
-    ready(callback) {
+    ready(callback: Function): void {
         if (this.readiness.dom) {
             callback();
         }
@@ -508,39 +469,31 @@ export default class Snowboard {
      * This can be used for ad-hoc scripts that don't need a full plugin. The given callback will be
      * called when the event name provided fires. This works for both normal and Promise events. For
      * a Promise event, your callback must return a Promise.
-     *
-     * @param {String} eventName
-     * @param {Function} callback
-     * @return {void}
      */
-    on(eventName, callback) {
+    on(eventName: string, callback: Function): void {
         if (!this.listeners.has(eventName)) {
             this.listeners.set(eventName, []);
         }
 
-        if (!this.listeners.get(eventName).includes(callback)) {
-            this.listeners.get(eventName).push(callback);
+        if (!this.listeners.get(eventName)!.includes(callback)) {
+            this.listeners.get(eventName)!.push(callback);
         }
     }
 
     /**
      * Removes a simple listener for an event.
-     *
-     * @param {String} eventName
-     * @param {Function} callback
-     * @return {void}
      */
-    off(eventName, callback) {
+    off(eventName: string, callback: Function): void {
         if (!this.listeners.has(eventName)) {
             return;
         }
 
-        const index = this.listeners.get(eventName).indexOf(callback);
+        const index = this.listeners.get(eventName)!.indexOf(callback);
         if (index === -1) {
             return;
         }
 
-        this.listeners.get(eventName).splice(index, 1);
+        this.listeners.get(eventName)!.splice(index, 1);
     }
 
     /**
@@ -548,10 +501,9 @@ export default class Snowboard {
      *
      * If any plugin returns a `false`, the event is considered cancelled.
      *
-     * @param {string} eventName
      * @return {boolean} If event was not cancelled
      */
-    globalEvent(eventName, ...parameters) {
+    globalEvent(eventName: string, ...parameters: any[]): boolean {
         this.debug(`Calling global event "${eventName}"`, ...parameters);
 
         let cancelled = false;
@@ -566,7 +518,7 @@ export default class Snowboard {
             listeners.forEach((name) => {
                 const plugin = this.getPlugin(name);
 
-                if (plugin.isSingleton() && plugin.getInstances().length === 0) {
+                if (plugin.isSingleton() && plugin.getInstances().size === 0) {
                     plugin.initialiseSingleton();
                 }
 
@@ -593,12 +545,12 @@ export default class Snowboard {
                             );
                         }
                     } else if (typeof listenMethod === 'string') {
-                        if (!instance[listenMethod]) {
+                        if (!instance.prototype[listenMethod]) {
                             throw new Error(`Missing "${listenMethod}" method in "${name}" plugin`);
                         }
 
                         try {
-                            if (instance[listenMethod](...parameters) === false) {
+                            if (instance.prototype[listenMethod](...parameters) === false) {
                                 cancelled = true;
                                 this.debug(`Global event "${eventName}" cancelled by "${name}" plugin`);
                             }
@@ -619,11 +571,11 @@ export default class Snowboard {
         if (
             !cancelled
             && this.listeners.has(eventName)
-            && this.listeners.get(eventName).length > 0
+            && this.listeners.get(eventName)!.length > 0
         ) {
-            this.debug(`Found ${this.listeners.get(eventName).length} ad-hoc listener(s) for global event "${eventName}"`);
+            this.debug(`Found ${this.listeners.get(eventName)!.length} ad-hoc listener(s) for global event "${eventName}"`);
 
-            this.listeners.get(eventName).forEach((listener) => {
+            this.listeners.get(eventName)!.forEach((listener) => {
                 // If a listener has cancelled the event, no further listeners are considered.
                 if (cancelled) {
                     return;
@@ -653,14 +605,11 @@ export default class Snowboard {
      * resolved, or one to reject.
      *
      * If no listeners are found, a resolved Promise is returned.
-     *
-     * @param {string} eventName
-     * @return {Promise}
      */
-    globalPromiseEvent(eventName, ...parameters) {
+    globalPromiseEvent(eventName: string, ...parameters: any[]): Promise<any[]> {
         this.debug(`Calling global promise event "${eventName}"`);
 
-        const promises = [];
+        const promises: Promise<any>[] = [];
 
         // Find plugins listening to this event.
         const listeners = this.listensToEvent(eventName);
@@ -672,7 +621,7 @@ export default class Snowboard {
             listeners.forEach((name) => {
                 const plugin = this.getPlugin(name);
 
-                if (plugin.isSingleton() && plugin.getInstances().length === 0) {
+                if (plugin.isSingleton() && plugin.getInstances().size === 0) {
                     plugin.initialiseSingleton();
                 }
 
@@ -725,11 +674,11 @@ export default class Snowboard {
         // Find ad-hoc listeners listening to this event.
         if (
             this.listeners.has(eventName)
-            && this.listeners.get(eventName).length > 0
+            && this.listeners.get(eventName)!.length > 0
         ) {
-            this.debug(`Found ${this.listeners.get(eventName).length} ad-hoc listener(s) for global promise event "${eventName}"`);
+            this.debug(`Found ${this.listeners.get(eventName)!.length} ad-hoc listener(s) for global promise event "${eventName}"`);
 
-            this.listeners.get(eventName).forEach((listener) => {
+            this.listeners.get(eventName)!.forEach((listener) => {
                 try {
                     const listenerPromise = listener(...parameters);
                     if (listenerPromise instanceof Promise === false) {
@@ -747,7 +696,7 @@ export default class Snowboard {
         }
 
         if (promises.length === 0) {
-            return Promise.resolve();
+            return Promise.resolve([]);
         }
 
         return Promise.all(promises);
@@ -757,10 +706,8 @@ export default class Snowboard {
      * Log a styled message in the console.
      *
      * Includes parameters and a stack trace.
-     *
-     * @return {void}
      */
-    logMessage(color, bold, message, ...parameters) {
+    private logMessage(color: string, bold: boolean = false, message: string = '', ...parameters: any[]): void {
         /* eslint-disable */
         console.groupCollapsed(
             '%c[Snowboard]',
@@ -792,10 +739,8 @@ export default class Snowboard {
 
     /**
      * Log a message.
-     *
-     * @return {void}
      */
-    log(message, ...parameters) {
+    log(message: string, ...parameters: any[]): void {
         this.logMessage('rgb(45, 167, 199)', false, message, ...parameters);
     }
 
@@ -803,10 +748,8 @@ export default class Snowboard {
      * Log a debug message.
      *
      * These messages are only shown when debugging is enabled.
-     *
-     * @return {void}
      */
-    debug(message, ...parameters) {
+    debug(message: string, ...parameters: any[]): void {
         if (!this.debugEnabled) {
             return;
         }
@@ -818,10 +761,8 @@ export default class Snowboard {
      * Log a warning message.
      *
      * These messages are only shown when debugging is enabled.
-     *
-     * @return {void}
      */
-    warning(message, ...parameters) {
+    warning(message: string, ...parameters: any[]): void {
         if (!this.debugEnabled) {
             return;
         }
@@ -831,10 +772,8 @@ export default class Snowboard {
 
     /**
      * Logs an error message.
-     *
-     * @return {void}
      */
-    error(message, ...parameters) {
+    error(message: string, ...parameters: any[]): void {
         this.logMessage('rgb(211, 71, 71)', true, message, ...parameters);
     }
 }
